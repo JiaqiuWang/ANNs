@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 
 import tensorflow as tf
-from tensorflow.keras import utils
 from tensorflow.keras.utils import to_categorical  # one_hot函数
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D  # 解决图像识别的，Conv3D用于视频
@@ -93,7 +92,7 @@ def define_model():
     # metrics是对模型有效性、性能performance的测量，classification分类问题与regression回归问题的测量方法不同
     # Keras对classification分类问题支持的测量包括：Binary Accuracy, Categorical Accuracy, Saprese Categorical Accuracy,
     # Top K, Sparese Top K
-    opt = SGD(lr=0.01, momentum=0.9)
+    opt = SGD(lr=0.01, momentum=0.9)  # 随机梯度下降优化
     model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
     print('模型基础信息：', model.summary())
     # (8)返回模型
@@ -123,12 +122,48 @@ def evaluate_model(dataX, dataY, n_folds=5):
         # (7)增加几个打印语句，方便调式与程序理解
         print('打印训练模型历史信息：', history.history.keys())
         # (8)评估模型evaluate model
-        
+        loss, acc = model.evaluate(testX, testY, verbose=0)
+        print('>%.3f' % (acc*100.0))
+        # (8)把每一折fold的值存在scores中,history
+        scores.append(acc)
+        histories.append(history)
+    print('scores:', scores)
+    print('histories.len:', len(histories))
+    # 返回数值
+    return scores, histories
 
 
+# plot diagnostic learning curves
+def summarize_diagnostics(histories):
+    for i in range(len(histories)):
+        # plot loss
+        plt.subplot(2, 1, 1)
+        plt.title('Cross Entropy Loss')
+        plt.plot(histories[i].history['loss'], color='blue', label='train')
+        plt.plot(histories[i].history['val_loss'], color='orange', label='test')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper right')
+
+        # plot accuracy
+        plt.subplot(2, 1, 2)
+        plt.title('Classification Accuracy')
+        plt.plot(histories[i].history['accuracy'], color='blue', label='train')
+        plt.plot(histories[i].history['val_accuracy'], color='orange', label='test')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper right')
+
+    plt.show()
 
 
-
+# summarize model performance
+def summarize_performance(scores):
+    # print summary
+    print('Accuracy: mean= %.3f std=%.3f, n=%d' % (mean(scores)*100, std(scores)*100, len(scores)))
+    # box and whisker plots of results
+    plt.boxplot(scores)
+    plt.show()
 
 
 # 0.运行测试工具来评估模型run the test harness for evaluating a model
@@ -139,10 +174,10 @@ def run_mymodel_test():
     trainX, testX = prep_pixels(trainX, testX)
     # (3)模型评估，其中先构造模型，再调用学习
     scores, histories = evaluate_model(trainX, trainY)
-    # # (4)打印学习曲线，看学习的过程、趋势变化
-    # summarize_diagnostics(histories)
-    # # (5)总结模型的性能performance
-    # summarize_performance(scores)
+    # (4)打印学习曲线，看学习的过程、趋势变化
+    summarize_diagnostics(histories)
+    # (5)总结模型的性能performance
+    summarize_performance(scores)
 
 
 # 主程序人口
